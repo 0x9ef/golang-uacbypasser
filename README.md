@@ -1,6 +1,6 @@
 # Golang UAC Bypasser (GUACBP)
 
-Collection bypass techiques on Golang.
+Collection of bypass techiques written in Golang.
 
 Techniques are found online, on different blogs and repos here on GitHub. I do not take credit for any of the findings, thanks to all the researchers. 
 
