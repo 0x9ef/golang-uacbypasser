@@ -1,6 +1,7 @@
 package guacbypasser
 
-type Reporter struct {
+// Simply Informer structure.
+type Informer struct {
 	Name string
 	Desc string
 	Id   int

