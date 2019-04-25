@@ -110,72 +110,77 @@ func main() {
 		table.Render()
 
 		return
-	}
-
-	if *payload != "" {
-		log.Println("[ERR] Payload --payload argument mismatching")
-		flag.PrintDefaults()
-		os.Exit(1)
-
-		if *method != "" {
-			log.Println("[ERR] Method --method argument mismatching")
+	} else {
+		if len(os.Args) != 5 {
+			log.Println("[ERR] Invalid arguments length")
 			flag.PrintDefaults()
 			os.Exit(1)
+		}
 
-			p := *payload
-			switch *method {
+		if payload == nil || *payload == "" {
+			log.Println("[ERR] Payload -payload argument mismatching")
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
 
-			// Once
-			case "computerdefaults", "COMPUTERDEFAULTS", "0":
-				if err, _ := once.NewOnceComputerDefaults(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "eventvwr", "EVENTVWR", "1":
-				if err, _ := once.NewOnceEventvwr(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "fodhelper", "FODHELPER", "2":
-				if err, _ := once.NewOnceFodHelper(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "sdcltcontrol", "SDCLTCONTROL", "3":
-				if err, _ := once.NewOnceSdcltControl(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "silentcleanup", "SILENTCLEANUP", "4":
-				if err, _ := once.NewOnceSilentCleanup(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "slui", "SLUI", "5":
-				if err, _ := once.NewOnceSlui(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
+		if method == nil || *method == "" {
+			log.Println("[ERR] Method -method argument mismatching")
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
 
-			// Persistence
-			case "hkcu", "HKCU", "6":
-				if err, _ := pers.NewPersistenceHKCU(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "hklm", "HKLM", "7":
-				if err, _ := pers.NewPersistenceHKLM(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "ifeo", "IFEO", "8":
-				if err, _ := pers.NewPersistenceIFEO(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "schtasks", "SCHTASKS", "9":
-				if err, _ := pers.NewPersistenceSCHTASKS(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "userinit", "USERINIT", "10":
-				if err, _ := pers.NewPersistenceUSERINIT(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
-			case "wmic", "WMIC", "11":
-				if err, _ := pers.NewPersistenceWMIC(p); err != nil {
-					log.Println("[ERR]:", err)
-				}
+		p := *payload
+		switch *method {
+		// Once
+		case "computerdefaults", "COMPUTERDEFAULTS", "0":
+			if err, _ := once.NewOnceComputerDefaults(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "eventvwr", "EVENTVWR", "1":
+			if err, _ := once.NewOnceEventvwr(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "fodhelper", "FODHELPER", "2":
+			if err, _ := once.NewOnceFodHelper(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "sdcltcontrol", "SDCLTCONTROL", "3":
+			if err, _ := once.NewOnceSdcltControl(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "silentcleanup", "SILENTCLEANUP", "4":
+			if err, _ := once.NewOnceSilentCleanup(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "slui", "SLUI", "5":
+			if err, _ := once.NewOnceSlui(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+
+		// Persistence
+		case "hkcu", "HKCU", "6":
+			if err, _ := pers.NewPersistenceHKCU(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "hklm", "HKLM", "7":
+			if err, _ := pers.NewPersistenceHKLM(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "ifeo", "IFEO", "8":
+			if err, _ := pers.NewPersistenceIFEO(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "schtasks", "SCHTASKS", "9":
+			if err, _ := pers.NewPersistenceSCHTASKS(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "userinit", "USERINIT", "10":
+			if err, _ := pers.NewPersistenceUSERINIT(p); err != nil {
+				log.Println("[ERR]:", err)
+			}
+		case "wmic", "WMIC", "11":
+			if err, _ := pers.NewPersistenceWMIC(p); err != nil {
+				log.Println("[ERR]:", err)
 			}
 		}
 	}
