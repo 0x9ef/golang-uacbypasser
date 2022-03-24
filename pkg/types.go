@@ -118,8 +118,8 @@ var InfoPersistCortana = Info{
 var InfoPersistHkcu = Info{
 	Id:          10,
 	Type:        "persist",
-	Name:        "Using registry key (HKEY_CURRENT_USER) manipulation",
-	Description: "",
+	Name:        "hkcu",
+	Description: "Using registry key (HKEY_CURRENT_USER) manipulation",
 	// Fixed: true
 	// FixedIn: <nil>
 	// Admin: false
