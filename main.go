@@ -150,7 +150,7 @@ func main() {
 		timeStart = time.Now()
 		err = f(absPath)
 		if err != nil {
-			log.Printf("ERR! Cannot elevate, because... %s\n", err.Error())
+			log.Printf("ERROR! Cannot elevate, because... %s\n", err.Error())
 			return
 		}
 		timeEnd = time.Now()
@@ -171,7 +171,7 @@ func main() {
 		timeStart = time.Now()
 		err = f.Exec(absPath)
 		if err != nil {
-			log.Printf("ERR! Cannot elevate, because... %s\n", err.Error())
+			log.Printf("ERROR! Cannot elevate, because... %s\n", err.Error())
 			return
 		}
 		timeEnd = time.Now()
