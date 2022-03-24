@@ -1,0 +1,25 @@
+name: Code CI
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Verify dependencies
+        run: go mod verify
+
+      - uses: actions/setup-go@v2
+      - name: Setup 1.17 Golang version
+        with:
+          go-version: 1.17
+          
+      - name: Build executable
+        run: go build -ldflags "-w -s" main.go
